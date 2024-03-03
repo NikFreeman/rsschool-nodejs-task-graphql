@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
 import { Source, graphql } from 'graphql';
+
 import { schema } from './types/schema.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
+  const { prisma } = fastify;
+
   fastify.route({
     url: '/',
     method: 'POST',
@@ -14,12 +18,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async handler(req) {
-      console.log('req--->', req.body);
       const { query, variables } = req.body;
-
+      console.log(query, variables);
       const source = new Source(query);
 
-      return graphql({ schema, source });
+      return graphql({ schema, source, variableValues: variables, contextValue: prisma });
     },
   });
 };

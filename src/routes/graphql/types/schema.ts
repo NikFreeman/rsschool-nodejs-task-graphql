@@ -1,10 +1,15 @@
-import { MemberTypeId, memberTypeFields } from './../../member-types/schemas';
-import { MemberType } from '@prisma/client';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import {
   GraphQLBoolean,
   GraphQLEnumType,
   GraphQLFloat,
   GraphQLInt,
+  GraphQLList,
+  GraphQLNonNull,
   GraphQLObjectType,
   GraphQLSchema,
   GraphQLString,
@@ -19,8 +24,8 @@ const memberTypeId = new GraphQLEnumType({
   },
 });
 
-const memberTypes = new GraphQLObjectType({
-  name: 'memberTypes',
+const member = new GraphQLObjectType({
+  name: 'member',
   fields: () => ({
     id: { type: memberTypeId },
     discount: {
@@ -30,48 +35,42 @@ const memberTypes = new GraphQLObjectType({
   }),
 });
 
-const post = new GraphQLObjectType({
-  name: 'post',
+const profile = new GraphQLObjectType({
+  name: 'profile',
   fields: () => ({
     id: { type: UUIDType },
-    title: { type: GraphQLString },
-    content: { type: GraphQLString },
-    authorId: {
-      type: UUIDType,
+    isMale: { type: GraphQLBoolean },
+    yearofBirth: { type: GraphQLInt },
+    userId: { type: UUIDType },
+    memberType: {
+      type: member,
+      resolve: async (profile, _, context) => {
+        return await context.MemberType.findUnique({
+          where: {
+            id: profile.memberTypeId,
+          },
+        });
+      },
     },
   }),
 });
 
-// const profile = new GraphQLObjectType({
-//   name: 'profile',
-//   fields: () => ({
-//     id: { type: UUIDType },
-//     isMale: { type: GraphQLBoolean },
-//     yearofBirth: { type: GraphQLInt },
-//     userId: { type: UUIDType },
-//     member: {
-//       type: memberType,
-//       resolve: async (profile, _, prisma) => {
-//         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-//         return await prisma.memberType.findUnique({
-//           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-//           where: { id },
-//         });
-//       },
-//     },
-//   }),
-// });
-
 const QueryType = new GraphQLObjectType({
   name: 'query',
   fields: () => ({
-    memberType: {
-      type: memberTypes,
-      args: {
-        id: { memberTypeId },
+    memberTypes: {
+      type: new GraphQLList(new GraphQLNonNull(member)),
+      resolve: async (_s, _, context) => {
+        return await context.memberType.findMany();
       },
-      resolve: async (_source, { id }, context) => {
-        return await context.memberType.findUnique({ where: { id } });
+    },
+    memberType: {
+      type: member,
+      args: { id: { type: memberTypeId } },
+      resolve: async (_, { id }, context) => {
+        return await context.memberType.findUnique({
+          where: { id },
+        });
       },
     },
   }),
@@ -85,4 +84,5 @@ const MutationType = new GraphQLObjectType({
 export const schema = new GraphQLSchema({
   query: QueryType,
   mutation: MutationType,
+  types: [memberTypeId, member, profile, UUIDType],
 });
