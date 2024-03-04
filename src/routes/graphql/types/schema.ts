@@ -63,10 +63,10 @@ const profile = new GraphQLObjectType({
     userId: { type: UUIDType },
     memberType: {
       type: member,
-      resolve: async (profile, _, context) => {
+      resolve: async (source, _, context) => {
         return await context.MemberType.findUnique({
           where: {
-            id: profile.memberTypeId,
+            id: source.memberTypeId,
           },
         });
       },
