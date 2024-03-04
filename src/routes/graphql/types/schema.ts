@@ -7,6 +7,7 @@ import {
   GraphQLBoolean,
   GraphQLEnumType,
   GraphQLFloat,
+  GraphQLInputObjectType,
   GraphQLInt,
   GraphQLList,
   GraphQLNonNull,
@@ -16,18 +17,18 @@ import {
 } from 'graphql';
 import { UUIDType } from './uuid.js';
 
-const memberTypeId = new GraphQLEnumType({
+const MemberTypeId = new GraphQLEnumType({
   name: 'MemberTypeId',
   values: {
-    basic: {},
-    business: {},
+    basic: { value: 'basic' },
+    business: { value: 'business' },
   },
 });
 
 const member = new GraphQLObjectType({
   name: 'member',
   fields: () => ({
-    id: { type: memberTypeId },
+    id: { type: MemberTypeId },
     discount: {
       type: GraphQLFloat,
     },
@@ -58,7 +59,7 @@ const profile = new GraphQLObjectType({
   fields: () => ({
     id: { type: UUIDType },
     isMale: { type: GraphQLBoolean },
-    yearofBirth: { type: GraphQLInt },
+    yearOfBirth: { type: GraphQLInt },
     userId: { type: UUIDType },
     memberType: {
       type: member,
@@ -146,7 +147,7 @@ const QueryType = new GraphQLObjectType({
     },
     memberType: {
       type: member,
-      args: { id: { type: memberTypeId } },
+      args: { id: { type: MemberTypeId } },
       resolve: async (_, { id }, context) => {
         return await context.memberType.findUnique({
           where: { id },
@@ -187,7 +188,7 @@ const QueryType = new GraphQLObjectType({
           type: UUIDType,
         },
       },
-      resolve: async (_source, { id }, context) => {
+      resolve: async (_, { id }, context) => {
         return await context.user.findUnique({
           where: { id },
         });
@@ -206,7 +207,7 @@ const QueryType = new GraphQLObjectType({
           type: UUIDType,
         },
       },
-      resolve: async (_source, { id }, context) => {
+      resolve: async (_, { id }, context) => {
         return await context.profile.findUnique({
           where: { id },
         });
@@ -215,13 +216,287 @@ const QueryType = new GraphQLObjectType({
   }),
 });
 
+const CreateUserInput = new GraphQLInputObjectType({
+  name: 'CreateUserInput',
+  fields: () => ({
+    name: {
+      type: GraphQLString,
+    },
+    balance: {
+      type: GraphQLFloat,
+    },
+  }),
+});
+const CreatePostInput = new GraphQLInputObjectType({
+  name: 'CreatePostInput',
+  fields: () => ({
+    title: {
+      type: GraphQLString,
+    },
+    content: {
+      type: GraphQLString,
+    },
+    authorId: {
+      type: UUIDType,
+    },
+  }),
+});
+const CreateProfileInput = new GraphQLInputObjectType({
+  name: 'CreateProfileInput',
+  fields: () => ({
+    isMale: {
+      type: GraphQLBoolean,
+    },
+    yearOfBirth: {
+      type: GraphQLInt,
+    },
+    memberTypeId: {
+      type: MemberTypeId,
+    },
+    userId: {
+      type: UUIDType,
+    },
+  }),
+});
+const ChangePostInput = new GraphQLInputObjectType({
+  name: 'ChangePostInput',
+  fields: () => ({
+    title: {
+      type: GraphQLString,
+    },
+    content: {
+      type: GraphQLString,
+    },
+  }),
+});
+const ChangeProfileInput = new GraphQLInputObjectType({
+  name: 'ChangeProfileInput',
+  fields: () => ({
+    isMale: {
+      type: GraphQLBoolean,
+    },
+    yearOfBirth: {
+      type: GraphQLInt,
+    },
+    memberTypeId: {
+      type: MemberTypeId,
+    },
+  }),
+});
+const ChangeUserInput = new GraphQLInputObjectType({
+  name: 'ChangeUserInput',
+  fields: () => ({
+    name: {
+      type: GraphQLString,
+    },
+    balance: {
+      type: GraphQLFloat,
+    },
+  }),
+});
 const MutationType = new GraphQLObjectType({
   name: 'mutation',
-  fields: { helloMut: { type: GraphQLString }, inputMut: { type: GraphQLString } },
+  fields: () => ({
+    createPost: {
+      type: post,
+      args: {
+        dto: {
+          type: new GraphQLNonNull(CreatePostInput),
+        },
+      },
+      resolve: async (_, { dto }, context) => {
+        return context.post.create({
+          data: dto,
+        });
+      },
+    },
+    createUser: {
+      type: userType,
+      args: {
+        dto: {
+          type: new GraphQLNonNull(CreateUserInput),
+        },
+      },
+      resolve: async (_, { dto }, context) => {
+        return context.user.create({
+          data: dto,
+        });
+      },
+    },
+    createProfile: {
+      type: profile,
+      args: {
+        dto: {
+          type: new GraphQLNonNull(CreateProfileInput),
+        },
+      },
+      resolve: async (_, { dto }, context) => {
+        return context.profile.create({
+          data: dto,
+        });
+      },
+    },
+    deletePost: {
+      type: GraphQLBoolean,
+      args: {
+        id: {
+          type: new GraphQLNonNull(UUIDType),
+        },
+      },
+      resolve: async (_, { id }, context) => {
+        await context.post.delete({
+          where: {
+            id,
+          },
+        });
+      },
+    },
+    deleteProfile: {
+      type: GraphQLBoolean,
+      args: {
+        id: {
+          type: new GraphQLNonNull(UUIDType),
+        },
+      },
+      resolve: async (_, { id }, context) => {
+        await context.profile.delete({
+          where: {
+            id,
+          },
+        });
+      },
+    },
+    deleteUser: {
+      type: GraphQLBoolean,
+      args: {
+        id: {
+          type: new GraphQLNonNull(UUIDType),
+        },
+      },
+      resolve: async (_, { id }, context) => {
+        await context.user.delete({
+          where: {
+            id,
+          },
+        });
+      },
+    },
+    changePost: {
+      type: post,
+      args: {
+        id: {
+          type: UUIDType,
+        },
+        dto: {
+          type: ChangePostInput,
+        },
+      },
+      resolve: async (_, { id, dto }, context) => {
+        return context.post.update({
+          where: { id },
+          data: dto,
+        });
+      },
+    },
+    changeProfile: {
+      type: profile,
+      args: {
+        id: {
+          type: UUIDType,
+        },
+        dto: {
+          type: ChangeProfileInput,
+        },
+      },
+      resolve: async (_, { id, dto }, context) => {
+        return context.profile.update({
+          where: { id },
+          data: dto,
+        });
+      },
+    },
+    changeUser: {
+      type: userType,
+      args: {
+        id: {
+          type: UUIDType,
+        },
+        dto: {
+          type: ChangeUserInput,
+        },
+      },
+      resolve: async (_, { id, dto }, context) => {
+        return context.user.update({
+          where: { id },
+          data: dto,
+        });
+      },
+    },
+    subscribeTo: {
+      type: userType,
+
+      args: {
+        userId: {
+          type: UUIDType,
+        },
+        authorId: {
+          type: UUIDType,
+        },
+      },
+      resolve: async (_, { userId, authorId }, context) => {
+        return context.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            userSubscribedTo: {
+              create: {
+                authorId: authorId,
+              },
+            },
+          },
+        });
+      },
+    },
+    unsubscribeFrom: {
+      type: GraphQLBoolean,
+      args: {
+        userId: {
+          type: UUIDType,
+        },
+        authorId: {
+          type: UUIDType,
+        },
+      },
+      resolve: async (_, { userId, authorId }, context) => {
+        await context.subscribersOnAuthors.delete({
+          where: {
+            subscriberId_authorId: {
+              subscriberId: userId,
+              authorId: authorId,
+            },
+          },
+        });
+      },
+    },
+  }),
 });
 
 export const schema = new GraphQLSchema({
   query: QueryType,
   mutation: MutationType,
-  types: [memberTypeId, member, profile, UUIDType],
+  types: [
+    member,
+    MemberTypeId,
+    post,
+    userType,
+    profile,
+    UUIDType,
+    CreateUserInput,
+    CreatePostInput,
+    CreateProfileInput,
+    ChangePostInput,
+    ChangeProfileInput,
+    ChangeUserInput,
+  ],
 });
